@@ -1,0 +1,95 @@
+---
+title: "Practical Machine Learning"
+author: "Isha Apte"
+date: "10/17/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(knitr)
+library(randomForest)
+library(RColorBrewer)
+```
+
+```{r}
+if(!file.exists("pml-training.csv"))
+{
+  download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "pml-training.csv", method = 'curl')
+}
+dataset <- read.csv("pml-training.csv", na.strings = c("NA", ""))
+if(!file.exists("pml-testing.csv"))
+{
+  download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", "pml-testing.csv", method = 'curl')
+}
+validationset <- read.csv("pml-testing.csv")
+```
+
+```{r}
+set.seed(17)
+```
+
+```{r}
+t = createDataPartition(y=dataset$classe, p=0.7, list=FALSE)
+train_set = dataset[t,]
+test_set = dataset[-t,]
+```
+
+```{r}
+na_Col = sapply(train_set, function(x) {sum(is.na(x))}) #In order to make a vector of all columns and NA entries
+na_Col
+col_wNA = names(na_Col[na_Col > 0]) #Columns that have NA values
+train_set = train_set[, !names(train_set) %in% col_wNA] 
+names(train_set)
+#Further gathering pnly imp info
+train_set <- train_set[, !names(train_set) %in% c("X", "user_name", "raw_timestamp_part_1", "raw_timestamp_part_2", "cvtd_timestamp", "new_window", "num_window")]
+```
+
+```{r}
+na_Col = sapply(validationset, function(x) {sum(is.na(x))}) 
+col_wNA = names(na_Col[na_Col > 0]) 
+validationset = validationset[, !names(validationset) %in% col_wNA] #Remove those columns from the training set.
+validationset <- validationset[, !names(validationset) %in% c("X", "user_name", "raw_timestamp_part_1", "raw_timestamp_part_2", "cvtd_timestamp", "new_window", "num_window")]
+```
+
+```{r}
+na_Col = sapply(test_set, function(x) {sum(is.na(x))}) 
+col_wNA = names(na_Col[na_Col > 0]) 
+test_set = test_set[, !names(test_set) %in% col_wNA] 
+test_set <- test_set[, !names(test_set) %in% c("X", "user_name", "raw_timestamp_part_1", "raw_timestamp_part_2", "cvtd_timestamp", "new_window", "num_window")]
+```
+
+```{r acc}
+mod <- randomForest(classe ~ .,   data=train_set, ntree = 50)
+p <- predict(mod, test_set)
+confusionMatrix(p, test_set$classe)
+modAcc <- confusionMatrix(p, test_set$classe)$overall[[1]]
+```
+
+```{r}
+p1 <- predict(mod, validationset)
+p1
+```
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
